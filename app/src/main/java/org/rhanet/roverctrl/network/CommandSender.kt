@@ -118,7 +118,7 @@ class CommandSender {
     private fun sendRaw(data: ByteArray, addr: InetAddress, port: Int) {
         socketLock.withLock {  // ИСПРАВЛЕНИЕ: синхронизация доступа к сокету
             try {
-                val sock = socket ?: return
+                val sock = socket ?: return@withLock
                 val pkt = DatagramPacket(data, data.size, addr, port)
                 sock.send(pkt)
                 lastSendTime = System.currentTimeMillis()
