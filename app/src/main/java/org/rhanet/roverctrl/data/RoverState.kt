@@ -34,6 +34,11 @@ data class OdometryState(
     val distM:      Float = 0f
 )
 
+// ── Коробка передач ───────────────────────────────────────────────────────
+object GearConfig {
+    val MAX_SPEED = mapOf(1 to 50, 2 to 100)
+}
+
 // ── Режим трекинга ────────────────────────────────────────────────────────
 enum class TrackingMode {
     MANUAL,       // джойстик рулит вручную

@@ -47,15 +47,15 @@ class CommandSender {
     }
 
     /** Единый метод отправки всех команд */
-    fun send(spd: Int, str: Int, fwd: Int, laser: Boolean, pan: Int, tilt: Int) {
-        sendRover(spd, str, fwd, laser)
+    fun send(spd: Int, str: Int, fwd: Int, laser: Boolean, pan: Int, tilt: Int, gear: Int = 2) {
+        sendRover(spd, str, fwd, laser, gear)
         sendXiao(pan, tilt)
     }
 
     /** Отправка только команд ровера */
-    fun sendRover(spd: Int, str: Int, fwd: Int, laser: Boolean) {
+    fun sendRover(spd: Int, str: Int, fwd: Int, laser: Boolean, gear: Int = 2) {
         val laserInt = if (laser) 1 else 0
-        val msg = "SPD:$spd;STR:$str;FWD:$fwd;LASER:$laserInt\n"
+        val msg = "SPD:$spd;STR:$str;FWD:$fwd;LASER:$laserInt;GEAR:$gear\n"
         scope.launch {
             roverAddr?.let { sendRaw(msg.toByteArray(), it, roverPort) }
         }

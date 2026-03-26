@@ -43,6 +43,7 @@ class ControlFragment : Fragment() {
     private lateinit var btnLaser:      ToggleButton
     private lateinit var btnGyroTilt:   ToggleButton
     private lateinit var btnPip:        ToggleButton
+    private lateinit var btnGear:       ToggleButton
     private lateinit var tvBat:         TextView
     private lateinit var tvSpd:         TextView
     private lateinit var tvYaw:         TextView
@@ -70,6 +71,7 @@ class ControlFragment : Fragment() {
         btnLaser      = view.findViewById(R.id.btn_laser)
         btnGyroTilt   = view.findViewById(R.id.btn_gyro_tilt)
         btnPip        = view.findViewById(R.id.btn_pip)
+        btnGear       = view.findViewById(R.id.btn_gear)
         tvBat         = view.findViewById(R.id.tv_bat)
         tvSpd         = view.findViewById(R.id.tv_spd)
         tvYaw         = view.findViewById(R.id.tv_yaw)
@@ -86,6 +88,7 @@ class ControlFragment : Fragment() {
         setupLaser()
         setupGyroTilt()
         setupPip()
+        setupGear()
         observeTelemetry()
         observeTurretStream()
     }
@@ -181,6 +184,19 @@ class ControlFragment : Fragment() {
         // Тап по PiP = recenter гиро
         pipContainer.setOnClickListener {
             gyroCtrl?.zero()
+        }
+    }
+
+    // ── Gear ─────────────────────────────────────────────────────────────
+
+    private fun setupGear() {
+        btnGear.setOnCheckedChangeListener { _, isChecked ->
+            vm.setGear(if (isChecked) 1 else 2)
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            vm.gear.collectLatest { g ->
+                btnGear.isChecked = (g == 1)
+            }
         }
     }
 
