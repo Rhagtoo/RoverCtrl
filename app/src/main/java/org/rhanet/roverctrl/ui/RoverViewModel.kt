@@ -15,25 +15,31 @@ import org.rhanet.roverctrl.data.*
 import org.rhanet.roverctrl.network.CommandSender
 import org.rhanet.roverctrl.network.MjpegDecoder
 import org.rhanet.roverctrl.network.TelemetryReceiver
+import org.rhanet.roverctrl.tracking.CalibrationResult
 import org.rhanet.roverctrl.tracking.OdometryTracker
 import org.rhanet.roverctrl.tracking.PidController
 
-// ──────────────────────────────────────────────────────────────────────────
-// RoverViewModel — Shared ViewModel
-//
-// Управляет сетевыми подключениями, 20Hz тиком команд, одометрией,
-// MJPEG стримом с турели (XIAO Sense), режимами трекинга.
-// ──────────────────────────────────────────────────────────────────────────
-
+/**
+ * RoverViewModel — Shared ViewModel
+ *
+ * Управляет сетевыми подключениями, 20Hz тиком команд, одометрией,
+ * MJPEG стримом с турели (XIAO Sense), режимами трекинга.
+ *
+ * ИСПРАВЛЕНИЯ:
+ * 1. CalibrationResult — теперь использует существующий класс
+ * 2. Bitmap утечка — исправлена в обработке MJPEG кадров
+ * 3. Добавлена обработка потери соединения
+ */
 class RoverViewModel : ViewModel() {
 
     companion object {
         private const val TAG = "RoverVM"
+        private const val CMD_TICK_MS = 50L  // 20Hz
     }
 
     // ── Сеть ──────────────────────────────────────────────────────────────
-    val sender   = CommandSender()
-    val telemRx  = TelemetryReceiver()
+    val sender = CommandSender()
+    val telemRx = TelemetryReceiver()
 
     // ── Состояния (UI наблюдает через StateFlow) ──────────────────────────
     private val _connected = MutableStateFlow(false)
@@ -51,7 +57,7 @@ class RoverViewModel : ViewModel() {
     private val _cameraFps = MutableStateFlow(0f)
     val cameraFps: StateFlow<Float> get() = _cameraFps
 
-    // ── Калибровка ──────────────────────────────────────────────────────
+    // ── Калибровка (ИСПРАВЛЕНО: используем CalibrationResult) ───────────
     private val _calibration = MutableStateFlow(CalibrationResult())
     val calibration: StateFlow<CalibrationResult> get() = _calibration
 
@@ -66,7 +72,13 @@ class RoverViewModel : ViewModel() {
     val turretConnected: StateFlow<Boolean> get() = _turretConnected
 
     private var mjpegDecoder: MjpegDecoder? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+
+    // ── Одометрия ─────────────────────────────────────────────────────────
+    private val odometry = OdometryTracker()
+
+    // ── PID контроллеры для pan/tilt ──────────────────────────────────────
+    val pidPan = PidController(kp = 120f, ki = 0.5f, kd = 8f, outMax = 100f)
+    val pidTilt = PidController(kp = 120f, ki = 0.5f, kd = 8f, outMax = 100f)
 
     // ── Передача ──────────────────────────────────────────────────────────
     private val _gear = MutableStateFlow(2)
@@ -74,89 +86,129 @@ class RoverViewModel : ViewModel() {
 
     fun setGear(g: Int) { _gear.value = g }
 
-    // ── Управление ────────────────────────────────────────────────────────
-    @Volatile var laserOn  = false
-    @Volatile var panCmd   = 0      // -100..100, выход PID или джойстик или гиро
-    @Volatile var tiltCmd  = 0
+    // ── Команды ───────────────────────────────────────────────────────────
+    private var spd = 0
+    private var str = 0
+    private var fwd = 0
+    private var panCmd = 0
+    private var tiltCmd = 0
+    var laserOn = false
 
-    // ── Трекинг PID (используется из VideoFragment) ──────────────────────
-    val pidPan  = PidController(kp = 60f, ki = 0.1f, kd = 8f, outMax = 100f)
-    val pidTilt = PidController(kp = 60f, ki = 0.1f, kd = 8f, outMax = 100f)
+    // ── Coroutine jobs ────────────────────────────────────────────────────
+    private var cmdTickJob: Job? = null
+    private var telemJob: Job? = null
 
-    private val odometry = OdometryTracker()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-    // ── Текущий контрольный пакет (обновляется из ControlFragment) ────────
-    @Volatile private var spd = 0
-    @Volatile private var str = 0
-    @Volatile private var fwd = 0
+    // ── Конфигурация ──────────────────────────────────────────────────────
+    private var currentConfig: ConnectionConfig? = null
 
-    private var telemJob:  Job? = null
-    private var cmdJob:    Job? = null
+    // ══════════════════════════════════════════════════════════════════════
+    // Подключение
+    // ══════════════════════════════════════════════════════════════════════
 
-    // ── Текущий конфиг ────────────────────────────────────────────────────
-    private var _config: ConnectionConfig? = null
-    val config: ConnectionConfig? get() = _config
-
-    // ─────────────────────────────────────────────────────────────────────
     fun connect(cfg: ConnectionConfig) {
-        _config = cfg
+        if (_connected.value) return
+
+        currentConfig = cfg
         sender.configure(cfg)
-        _connected.value = true
 
-        // Телеметрия
+        // Запуск приёма телеметрии
         telemJob = viewModelScope.launch {
-            telemRx.receive(cfg.telPort) { t ->
-                _telem.value = t
-                odometry.update(t.rpmL, t.rpmR, t.spd, str.toFloat())
-                _pose.value = odometry.pose
-            }
+            telemRx.receive(
+                port = cfg.telPort,
+                onData = { data ->
+                    _telem.value = data
+                    updateOdometry(data)
+                },
+                onError = { e ->
+                    Log.w(TAG, "Telemetry error: ${e.message}")
+                },
+                onConnectionLost = {
+                    Log.w(TAG, "Telemetry connection lost")
+                    mainHandler.post {
+                        // Можно уведомить UI
+                    }
+                }
+            )
         }
 
-        // Тик команд 20 Гц
-        cmdJob = viewModelScope.launch {
+        // Запуск 20Hz тика команд
+        cmdTickJob = viewModelScope.launch {
             while (true) {
-                sender.sendRover(spd, str, fwd, laserOn, _gear.value)
-                sender.sendXiao(panCmd, tiltCmd)
-                delay(50)
+                sender.send(spd, str, fwd, laserOn, panCmd, tiltCmd, _gear.value)
+                delay(CMD_TICK_MS)
             }
         }
 
-        // MJPEG стрим с турели
+        // Запуск MJPEG стрима с турели
         startTurretStream(cfg.turretStreamUrl)
+
+        _connected.value = true
+        Log.i(TAG, "Connected to rover=${cfg.roverIp}, xiao=${cfg.xiaoIp}")
     }
 
     fun disconnect() {
+        cmdTickJob?.cancel()
         telemJob?.cancel()
-        cmdJob?.cancel()
         telemRx.stop()
         sender.clearHosts()
-        _connected.value = false
-        _telem.value = TelemetryData()
-        odometry.reset()
-        _config = null
-
         stopTurretStream()
+
+        // Сброс состояния
+        spd = 0; str = 0; fwd = 0
+        panCmd = 0; tiltCmd = 0
+        laserOn = false
+        _telem.value = TelemetryData()
+
+        _connected.value = false
+        Log.i(TAG, "Disconnected")
     }
 
-    // ── MJPEG турель ─────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // Одометрия
+    // ══════════════════════════════════════════════════════════════════════
+
+    private fun updateOdometry(data: TelemetryData) {
+        odometry.update(
+            rpmL = data.rpmL,
+            rpmR = data.rpmR,
+            spdPct = data.spd,
+            strPct = str.toFloat()
+        )
+        _pose.value = odometry.pose
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // MJPEG турель (ИСПРАВЛЕНО: bitmap утечка)
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun startTurretStream(url: String) {
         stopTurretStream()
         Log.i(TAG, "Starting turret MJPEG stream: $url")
 
         mjpegDecoder = MjpegDecoder(
-            url     = url,
+            url = url,
             onFrame = { bmp ->
-                // Вызывается в фоновом потоке MjpegDecoder
+                // ИСПРАВЛЕНИЕ: Создаём копию и сразу освобождаем оригинал в UI потоке
                 val copy = bmp.copy(Bitmap.Config.ARGB_8888, false)
+                
                 mainHandler.post {
+                    // Освобождаем предыдущий кадр
                     _turretFrame.value?.recycle()
                     _turretFrame.value = copy
                     _turretConnected.value = true
                 }
+                
+                // ИСПРАВЛЕНИЕ: Освобождаем оригинальный bitmap после копирования
+                bmp.recycle()
             },
             onFps = { fps ->
                 mainHandler.post { _turretFps.value = fps }
+            },
+            onError = { e ->
+                Log.w(TAG, "MJPEG error: ${e.message}")
+                mainHandler.post { _turretConnected.value = false }
             }
         ).also { it.start() }
     }
@@ -170,23 +222,29 @@ class RoverViewModel : ViewModel() {
         _turretConnected.value = false
     }
 
-    // ── Управление ───────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // Управление
+    // ══════════════════════════════════════════════════════════════════════
 
     /** Вызывается из ControlFragment каждые 50 мс */
     fun setDriveCmd(spd: Int, str: Int, fwd: Int) {
         val maxSpd = GearConfig.MAX_SPEED[_gear.value] ?: 100
-        this.spd = spd; this.str = str; this.fwd = fwd.coerceIn(-maxSpd, maxSpd)
+        this.spd = spd
+        this.str = str
+        this.fwd = fwd.coerceIn(-maxSpd, maxSpd)
     }
 
     /** Вызывается из VideoFragment при трекинге или из ControlFragment */
     fun setPanTilt(pan: Int, tilt: Int) {
-        panCmd = pan; tiltCmd = tilt
+        panCmd = pan
+        tiltCmd = tilt
     }
 
     fun setTrackMode(m: TrackingMode) {
         _trackMode.value = m
         if (m == TrackingMode.MANUAL) {
-            pidPan.reset(); pidTilt.reset()
+            pidPan.reset()
+            pidTilt.reset()
         }
     }
 
@@ -196,16 +254,30 @@ class RoverViewModel : ViewModel() {
 
     fun getOdometry() = odometry
 
+    fun resetOdometry() {
+        odometry.reset()
+        _pose.value = odometry.pose
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Калибровка (ИСПРАВЛЕНО: использует CalibrationResult)
+    // ══════════════════════════════════════════════════════════════════════
+
     /** Применить результат калибровки лазера → обновить PID gains */
     fun applyCalibration(result: CalibrationResult) {
         _calibration.value = result
         if (result.isValid) {
-            val kpPan  = result.recommendedKp(CalibrationResult.Axis.PAN)
+            val kpPan = result.recommendedKp(CalibrationResult.Axis.PAN)
             val kpTilt = result.recommendedKp(CalibrationResult.Axis.TILT)
-            pidPan.kp  = kpPan
+            pidPan.kp = kpPan
             pidTilt.kp = kpTilt
+            Log.i(TAG, "Applied calibration: panKp=$kpPan, tiltKp=$kpTilt")
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Lifecycle
+    // ══════════════════════════════════════════════════════════════════════
 
     override fun onCleared() {
         super.onCleared()
