@@ -257,6 +257,18 @@
             android:background="#FF8F00"
             android:layout_marginBottom="4dp" />
 
+        <!-- Переключатель передачи -->
+        <ToggleButton
+            android:id="@+id/btn_gear"
+            android:layout_width="120dp"
+            android:layout_height="40dp"
+            android:textOn="GEAR 1 (50%)"
+            android:textOff="GEAR 2 (100%)"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:background="#1565C0"
+            android:layout_marginBottom="4dp" />
+
         <!-- Gyro отладка -->
         <TextView
             android:id="@+id/tv_gyro_debug"

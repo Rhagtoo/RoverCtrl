@@ -271,20 +271,22 @@ void loop() {
     int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
     packetBuffer[len] = 0;
 
-    int spd = 0, str = 0, fwd = 0, pan = 0, tilt = 0, laser = 0;
+    int spd = 0, str = 0, fwd = 0, pan = 0, tilt = 0, laser = 0, gear = 2;
 
     char* p;
 
-    if ((p = strstr(packetBuffer, "FWD:"))) fwd = atoi(p + 4);
-    if ((p = strstr(packetBuffer, "STR:"))) str = atoi(p + 4);
-    if ((p = strstr(packetBuffer, "PAN:"))) pan = atoi(p + 4);
-    if ((p = strstr(packetBuffer, "TILT:"))) tilt = atoi(p + 5);
+    if ((p = strstr(packetBuffer, "FWD:")))   fwd   = atoi(p + 4);
+    if ((p = strstr(packetBuffer, "STR:")))   str   = atoi(p + 4);
+    if ((p = strstr(packetBuffer, "PAN:")))   pan   = atoi(p + 4);
+    if ((p = strstr(packetBuffer, "TILT:")))  tilt  = atoi(p + 5);
     if ((p = strstr(packetBuffer, "LASER:"))) laser = atoi(p + 6);
+    if ((p = strstr(packetBuffer, "GEAR:")))  gear  = atoi(p + 5);
 
     bool forward = (fwd >= 0);
     int absSpd = constrain(abs(fwd), 0, 100);
 
-    int duty = map(absSpd, 0, 100, 0, PWM_MAX);
+    int maxDuty = (gear == 1) ? (PWM_MAX / 2) : PWM_MAX;
+    int duty = map(absSpd, 0, 100, 0, maxDuty);
 
     lastAbsSpd = absSpd;
 

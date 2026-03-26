@@ -68,6 +68,12 @@ class RoverViewModel : ViewModel() {
     private var mjpegDecoder: MjpegDecoder? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // ── Передача ──────────────────────────────────────────────────────────
+    private val _gear = MutableStateFlow(2)
+    val gear: StateFlow<Int> get() = _gear
+
+    fun setGear(g: Int) { _gear.value = g }
+
     // ── Управление ────────────────────────────────────────────────────────
     @Volatile var laserOn  = false
     @Volatile var panCmd   = 0      // -100..100, выход PID или джойстик или гиро
@@ -109,7 +115,7 @@ class RoverViewModel : ViewModel() {
         // Тик команд 20 Гц
         cmdJob = viewModelScope.launch {
             while (true) {
-                sender.sendRover(spd, str, fwd, laserOn)
+                sender.sendRover(spd, str, fwd, laserOn, _gear.value)
                 sender.sendXiao(panCmd, tiltCmd)
                 delay(50)
             }
@@ -168,7 +174,8 @@ class RoverViewModel : ViewModel() {
 
     /** Вызывается из ControlFragment каждые 50 мс */
     fun setDriveCmd(spd: Int, str: Int, fwd: Int) {
-        this.spd = spd; this.str = str; this.fwd = fwd
+        val maxSpd = GearConfig.MAX_SPEED[_gear.value] ?: 100
+        this.spd = spd; this.str = str; this.fwd = fwd.coerceIn(-maxSpd, maxSpd)
     }
 
     /** Вызывается из VideoFragment при трекинге или из ControlFragment */
