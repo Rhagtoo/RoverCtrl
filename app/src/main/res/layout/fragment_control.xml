@@ -122,49 +122,58 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="8dp">
 
-        <!-- Батарея -->
+        <!-- Телеметрия: BAT / SPD / RSSI в одну строку -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
+            android:layout_marginBottom="2dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="BAT: "
+                android:text="BAT:"
                 android:textColor="#888888"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
             <TextView
                 android:id="@+id/tv_bat"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="--"
                 android:textColor="#00E676"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Скорость -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="8dp" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SPD: "
+                android:text="SPD:"
                 android:textColor="#888888"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
             <TextView
                 android:id="@+id/tv_spd"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                android:textSize="12sp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="8dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="YAW:"
+                android:textColor="#888888"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tv_yaw"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0°"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:layout_marginStart="2dp" />
         </LinearLayout>
 
         <!-- RSSI -->
@@ -173,20 +182,21 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
+            android:layout_marginBottom="2dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="RSSI: "
+                android:text="RSSI:"
                 android:textColor="#888888"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
             <TextView
                 android:id="@+id/tv_rssi"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 dBm"
                 android:textColor="#FFAB00"
-                android:textSize="14sp" />
+                android:textSize="12sp"
+                android:layout_marginStart="2dp" />
         </LinearLayout>
 
         <!-- Одометрия -->
@@ -196,78 +206,71 @@
             android:layout_height="wrap_content"
             android:text="X:0.00 Y:0.00 H:0°"
             android:textColor="#80CBC4"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp" />
+            android:textSize="11sp"
+            android:layout_marginBottom="4dp" />
 
-        <!-- Yaw -->
+        <!-- Кнопки управления: сетка 2×2 -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="YAW: "
-                android:textColor="#888888"
-                android:textSize="14sp" />
-            <TextView
-                android:id="@+id/tv_yaw"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0°"
+            android:layout_marginBottom="3dp">
+
+            <ToggleButton
+                android:id="@+id/btn_laser"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:textOn="LASER ON"
+                android:textOff="LASER OFF"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                android:textSize="10sp"
+                android:background="#FF5252"
+                android:layout_marginEnd="3dp" />
+
+            <ToggleButton
+                android:id="@+id/btn_gyro_tilt"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:textOn="GYRO ON"
+                android:textOff="GYRO OFF"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:background="#7C4DFF" />
+
         </LinearLayout>
 
-        <!-- Кнопка лазера -->
-        <ToggleButton
-            android:id="@+id/btn_laser"
-            android:layout_width="120dp"
-            android:layout_height="40dp"
-            android:textOn="LASER ON"
-            android:textOff="LASER OFF"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:background="#FF5252"
-            android:layout_marginBottom="6dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="3dp">
 
-        <!-- ═══ Gyro tilt toggle ═══ -->
-        <ToggleButton
-            android:id="@+id/btn_gyro_tilt"
-            android:layout_width="120dp"
-            android:layout_height="40dp"
-            android:textOn="GYRO ON"
-            android:textOff="GYRO OFF"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:background="#7C4DFF"
-            android:layout_marginBottom="4dp" />
+            <ToggleButton
+                android:id="@+id/btn_pip"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:textOn="PiP ON"
+                android:textOff="PiP OFF"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:background="#FF8F00"
+                android:layout_marginEnd="3dp" />
 
-        <!-- Кнопка PiP (показать/скрыть стрим турели) -->
-        <ToggleButton
-            android:id="@+id/btn_pip"
-            android:layout_width="120dp"
-            android:layout_height="40dp"
-            android:textOn="PiP ON"
-            android:textOff="PiP OFF"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:background="#FF8F00"
-            android:layout_marginBottom="4dp" />
+            <ToggleButton
+                android:id="@+id/btn_gear"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:textOn="GEAR 1"
+                android:textOff="GEAR 2"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:background="#1565C0" />
 
-        <!-- Переключатель передачи -->
-        <ToggleButton
-            android:id="@+id/btn_gear"
-            android:layout_width="120dp"
-            android:layout_height="40dp"
-            android:textOn="GEAR 1 (50%)"
-            android:textOff="GEAR 2 (100%)"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:background="#1565C0"
-            android:layout_marginBottom="4dp" />
+        </LinearLayout>
 
         <!-- Gyro отладка -->
         <TextView
