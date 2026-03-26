@@ -129,6 +129,13 @@ data class OdometryState(
 )
 
 /**
+ * Коробка передач
+ */
+object GearConfig {
+    val MAX_SPEED = mapOf(1 to 50, 2 to 100)
+}
+
+/**
  * Режим трекинга
  */
 enum class TrackingMode {

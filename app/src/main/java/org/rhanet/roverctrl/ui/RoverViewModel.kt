@@ -80,6 +80,12 @@ class RoverViewModel : ViewModel() {
     val pidPan = PidController(kp = 120f, ki = 0.5f, kd = 8f, outMax = 100f)
     val pidTilt = PidController(kp = 120f, ki = 0.5f, kd = 8f, outMax = 100f)
 
+    // ── Передача ──────────────────────────────────────────────────────────
+    private val _gear = MutableStateFlow(2)
+    val gear: StateFlow<Int> get() = _gear
+
+    fun setGear(g: Int) { _gear.value = g }
+
     // ── Команды ───────────────────────────────────────────────────────────
     private var spd = 0
     private var str = 0
@@ -130,7 +136,7 @@ class RoverViewModel : ViewModel() {
         // Запуск 20Hz тика команд
         cmdTickJob = viewModelScope.launch {
             while (true) {
-                sender.send(spd, str, fwd, laserOn, panCmd, tiltCmd)
+                sender.send(spd, str, fwd, laserOn, panCmd, tiltCmd, _gear.value)
                 delay(CMD_TICK_MS)
             }
         }
@@ -222,9 +228,10 @@ class RoverViewModel : ViewModel() {
 
     /** Вызывается из ControlFragment каждые 50 мс */
     fun setDriveCmd(spd: Int, str: Int, fwd: Int) {
+        val maxSpd = GearConfig.MAX_SPEED[_gear.value] ?: 100
         this.spd = spd
         this.str = str
-        this.fwd = fwd
+        this.fwd = fwd.coerceIn(-maxSpd, maxSpd)
     }
 
     /** Вызывается из VideoFragment при трекинге или из ControlFragment */

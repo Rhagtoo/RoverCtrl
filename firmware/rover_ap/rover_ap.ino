@@ -184,11 +184,11 @@ void stopMotors() {
 // ══════════════════════════════════════════════════════════════════════════
 
 void parseCommand(const char* cmd) {
-    int spd = 0, str = 0, fwd = 0, laser = 0;
-    
-    // Parse: SPD:{};STR:{};FWD:{};LASER:{}\n
+    int spd = 0, str = 0, fwd = 0, laser = 0, gear = 2;
+
+    // Parse: SPD:{};STR:{};FWD:{};LASER:{};GEAR:{}\n
     char* ptr = (char*)cmd;
-    
+
     if (strstr(ptr, "SPD:")) {
         ptr = strstr(ptr, "SPD:") + 4;
         spd = atoi(ptr);
@@ -205,16 +205,21 @@ void parseCommand(const char* cmd) {
         ptr = strstr(ptr, "LASER:") + 6;
         laser = atoi(ptr);
     }
-    
+    if (strstr(ptr, "GEAR:")) {
+        ptr = strstr(ptr, "GEAR:") + 5;
+        gear = constrain(atoi(ptr), 1, 2);
+    }
+
     // Apply steering
     // ИСПРАВЛЕНИЕ: map(-100,100, 40,140) — согласовано с документацией
     str = constrain(str, -100, 100);
     int steerAngle = map(str, -100, 100, 40, 140);
     steerServo.write(steerAngle);
     lastStr = str;
-    
-    // Apply motor
-    fwd = constrain(fwd, -100, 100);
+
+    // Apply motor with gear limit (gear 1 = max 50%, gear 2 = max 100%)
+    int maxFwd = (gear == 1) ? 50 : 100;
+    fwd = constrain(fwd, -maxFwd, maxFwd);
     setMotor(fwd);
     lastFwd = fwd;
     
