@@ -21,9 +21,10 @@
             android:layout_marginBottom="4dp" />
 
         <TextView
+            android:id="@+id/tv_hint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Phone camera (CameraX 120fps) + XIAO turret cam (MJPEG)"
+            android:text="Connect phone to WiFi 'RoverAP' (password: rover12345)"
             android:textColor="#80CBC4"
             android:textSize="12sp"
             android:layout_marginBottom="12dp" />
@@ -43,7 +44,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ROVER (XIAO ESP32S3)"
+            android:text="ROVER (XIAO ESP32S3 — AP Host)"
             android:textColor="#00E676"
             android:textSize="13sp"
             android:textStyle="bold"
@@ -63,6 +64,8 @@
             android:textColor="#FFFFFF"
             android:background="#333333"
             android:padding="8dp"
+            android:hint="192.168.4.1"
+            android:textColorHint="#666666"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -79,6 +82,8 @@
             android:textColor="#FFFFFF"
             android:background="#333333"
             android:padding="8dp"
+            android:hint="4210"
+            android:textColorHint="#666666"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -95,6 +100,8 @@
             android:textColor="#FFFFFF"
             android:background="#333333"
             android:padding="8dp"
+            android:hint="4211"
+            android:textColorHint="#666666"
             android:layout_marginBottom="16dp" />
 
         <!-- ── Xiao (Pan/Tilt серво + камера) ─────── -->
@@ -102,7 +109,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="XIAO SENSE (PAN/TILT + CAMERA)"
+            android:text="XIAO SENSE (PAN/TILT + CAMERA — Client)"
             android:textColor="#FFAB00"
             android:textSize="13sp"
             android:textStyle="bold"
@@ -122,6 +129,8 @@
             android:textColor="#FFFFFF"
             android:background="#333333"
             android:padding="8dp"
+            android:hint="192.168.4.2"
+            android:textColorHint="#666666"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -138,6 +147,8 @@
             android:textColor="#FFFFFF"
             android:background="#333333"
             android:padding="8dp"
+            android:hint="4210"
+            android:textColorHint="#666666"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -154,15 +165,45 @@
             android:textColor="#FFFFFF"
             android:background="#333333"
             android:padding="8dp"
+            android:hint="81"
+            android:textColorHint="#666666"
             android:layout_marginBottom="16dp" />
 
-        <!-- Connect -->
-        <Button
-            android:id="@+id/btn_connect"
+        <!-- Buttons -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="Connect"
-            android:textSize="16sp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btn_connect"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="2"
+                android:text="Connect"
+                android:textSize="16sp"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btn_reset"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="Reset"
+                android:textSize="14sp"
+                android:backgroundTint="#555555" />
+
+        </LinearLayout>
+
+        <!-- Info -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="v2.0 AP Mode — Rover creates WiFi hotspot"
+            android:textColor="#666666"
+            android:textSize="11sp"
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
 </ScrollView>
